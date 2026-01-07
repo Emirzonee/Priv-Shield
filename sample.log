@@ -1,0 +1,10 @@
+[2026-01-15 08:12:33] INFO  User login successful: ahmet.yilmaz@company.com from 192.168.1.14
+[2026-01-15 08:14:01] WARN  Failed login attempt for admin@internal.net from 10.0.0.55
+[2026-01-15 08:15:44] INFO  Payment processed — CC: 4543-1234-5678-9010, user_id: 30412876905
+[2026-01-15 08:17:22] DEBUG API request from 172.16.0.3, token refresh for zeynep.kara@outlook.com
+[2026-01-15 08:19:10] ERROR Connection timeout from 192.168.2.100, retrying...
+[2026-01-15 08:21:05] INFO  New registration: can.demir@gmail.com, phone: +90 532 444 12 89
+[2026-01-15 08:23:30] WARN  Suspicious activity detected from 10.10.10.1, national_id: 15237894561
+[2026-01-15 08:25:18] INFO  Refund issued — CC: 5124 0987 6543 2100, amount: 249.90 TRY
+[2026-01-15 08:27:55] DEBUG Health check OK, uptime: 14d 3h 22m
+[2026-01-15 08:30:42] INFO  Bulk export requested by ops@datateam.io from 192.168.1.50

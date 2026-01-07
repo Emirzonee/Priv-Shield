@@ -1,59 +1,103 @@
+"""
+Priv-Shield — Data Anonymization Tool
+
+Scans log files for sensitive information (emails, IPs, credit cards,
+national IDs) and replaces them with masked placeholders.
+Useful for KVKK/GDPR compliance before sharing data externally.
+"""
+
 import re
+import sys
 import os
-import time
+from datetime import datetime
 
-def anonymize_log(filepath):
-    print(f"\n[*] PRIV-SHIELD: Veri Gizliliği Aracı Başlatılıyor...")
-    print(f"[*] Hedef Dosya: {filepath}")
-    
-    # 1. Regex Desenleri (Hassas Veri Tanımları)
-    patterns = {
-        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b': '<EMAIL_GIZLENDI>', # Email
-        r'\b(?:\d{1,3}\.){3}\d{1,3}\b': '<IP_GIZLENDI>',          # IP Adresi
-        r'\b\d{11}\b': '<TC_NO_GIZLENDI>',                        # 11 Haneli TC/ID
-        r'\b(50|51|4\d)\d{2}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b': '<KREDI_KARTI_GIZLENDI>' # Kredi Kartı
-    }
 
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-            original_len = len(content)
+# regex patterns for each sensitive data type
+PATTERNS = {
+    "email":       (r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', "<EMAIL_MASKED>"),
+    "ip_address":  (r'\b(?:\d{1,3}\.){3}\d{1,3}\b', "<IP_MASKED>"),
+    "national_id": (r'\b\d{11}\b', "<NATIONAL_ID_MASKED>"),
+    "credit_card": (r'\b(?:4\d{3}|5[0-5]\d{2})[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b', "<CC_MASKED>"),
+    "phone":       (r'(?:\+90|0)\s?\d{3}\s?\d{3}\s?\d{2}\s?\d{2}', "<PHONE_MASKED>"),
+}
 
-        # 2. Maskeleme İşlemi
-        masked_content = content
-        count = 0
-        for pattern, mask in patterns.items():
-            matches = len(re.findall(pattern, masked_content))
-            if matches > 0:
-                masked_content = re.sub(pattern, mask, masked_content)
-                count += matches
 
-        # 3. Yeni Dosyayı Kaydet
-        new_filename = "masked_output.txt"
-        with open(new_filename, 'w', encoding='utf-8') as f:
-            f.write(masked_content)
+def load_file(path):
+    """Read file content, return as string."""
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
-        print("-" * 50)
-        print(f"[+] İŞLEM BAŞARILI!")
-        print(f"[+] Toplam Maskelenen Veri: {count}")
-        print(f"[+] Orijinal Boyut: {original_len} karakter")
-        print(f"[+] Oluşturulan Güvenli Dosya: {new_filename}")
-        print("-" * 50)
 
-    except FileNotFoundError:
-        print("[!] Hata: Dosya bulunamadı.")
-    except Exception as e:
-        print(f"[!] Beklenmedik Hata: {e}")
+def mask_sensitive_data(text):
+    """
+    Run all regex patterns against the text.
+    Returns the masked text and a dict with match counts per category.
+    """
+    stats = {}
+    masked = text
+
+    for label, (pattern, placeholder) in PATTERNS.items():
+        found = re.findall(pattern, masked)
+        if found:
+            masked = re.sub(pattern, placeholder, masked)
+            stats[label] = len(found)
+
+    return masked, stats
+
+
+def write_output(content, output_path):
+    """Write masked content to a new file."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def print_report(input_path, output_path, stats, original_size):
+    """Print a summary of what was masked."""
+    total = sum(stats.values())
+
+    print("-" * 45)
+    print(f"  Input:    {input_path}")
+    print(f"  Output:   {output_path}")
+    print(f"  Size:     {original_size} chars")
+    print("-" * 45)
+
+    if total == 0:
+        print("  No sensitive data found.")
+    else:
+        for label, count in stats.items():
+            print(f"  {label:<15} {count} match(es)")
+        print("-" * 45)
+        print(f"  Total masked: {total}")
+
+    print("-" * 45)
+
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <logfile>")
+        print("Example: python main.py sample.log")
+        sys.exit(1)
+
+    input_path = sys.argv[1]
+
+    if not os.path.isfile(input_path):
+        print(f"[!] File not found: {input_path}")
+        sys.exit(1)
+
+    # build output filename: sample.log -> sample_masked.txt
+    base, _ = os.path.splitext(input_path)
+    output_path = f"{base}_masked.txt"
+
+    print(f"\n[*] Priv-Shield starting...")
+    print(f"[*] Scanning: {input_path}\n")
+
+    content = load_file(input_path)
+    masked, stats = mask_sensitive_data(content)
+    write_output(masked, output_path)
+
+    print_report(input_path, output_path, stats, len(content))
+    print(f"\n[+] Done. Masked file saved to: {output_path}")
+
 
 if __name__ == "__main__":
-    # Test için örnek veri oluştur
-    sample_text = """
-    [INFO] User login: ahmet.yilmaz@sirket.com
-    [DEBUG] Connection from: 192.168.1.14
-    [WARN] Payment attempt CC: 4543-1234-5678-9010
-    """
-    with open("sample.log", "w") as f:
-        f.write(sample_text)
-    
-    print("Test için 'sample.log' dosyası oluşturuldu.")
-    anonymize_log("sample.log")
+    main()
