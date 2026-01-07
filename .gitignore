@@ -1,4 +1,14 @@
-```text
 __pycache__/
-*.log
-masked_output.txt
+*.py[cod]
+*$py.class
+
+# output files
+*_masked.txt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
